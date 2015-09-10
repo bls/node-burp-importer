@@ -2,7 +2,8 @@
 var expect = require('chai').expect,
     BurpImporter = require('../index'),
     fs = require('fs'),
-    zlib = require('zlib');
+    zlib = require('zlib'),
+    crypto = require('crypto');
 
 function importAll(source, cb) {
     var importer = new BurpImporter(source),
@@ -11,9 +12,13 @@ function importAll(source, cb) {
         allItems.push(item);
     });
     importer.on('end', function () {
-        cb(allItems);
+        cb(null, allItems);
     });
     importer.import();
+}
+
+function sha256_base64(val) {
+    return crypto.createHash('sha256').update(val).digest('base64');
 }
 
 function checkItemWithRequestOnly(item) {
@@ -28,8 +33,9 @@ function checkItemWithRequestOnly(item) {
     expect(item.responselength).to.be.undefined;
     expect(item.mimetype).to.be.undefined;
     expect(item.extension).to.be.equal('js');
-    // request
-    // response
+    expect(item.request.length).to.be.equal(315);
+    expect(sha256_base64(item.request)).to.be.equal('ZnF0SVMJuucluu003TVUrXAo0AmKRdRGXqv8FdAngjU=');
+    expect(item.response.length).to.be.equal(0);
 }
 
 function checkItemWithRequestResponse(item) {
@@ -44,33 +50,49 @@ function checkItemWithRequestResponse(item) {
     expect(item.responselength).to.be.equal(3475);
     expect(item.mimetype).to.be.equal('HTML');
     expect(item.extension).to.be.equal('');
-    // request
-    // response
+    expect(item.request.length).to.be.equal(300);
+    expect(sha256_base64(item.request)).to.be.equal('JBdjh9b+72Y5urte2Eyd67oz1quGijJjbMqwuRuIzWk=');
+    expect(item.response.length).to.be.equal(3475);
+    expect(sha256_base64(item.response)).to.be.equal('2hbGntMDGIS+q0w/1/sZMNBa44QlmAOLM9ybJyoMalQ=');
 }
 
 describe("BurpImporter", function(){
     describe("import format", function(){
         it("should import base64 encoded request only items", function(done){
-            importAll(__dirname + '/no-response.b64.xml', function (items) {
+            importAll(__dirname + '/no-response.b64.xml', function (err, items) {
                 expect(items.length).to.be.equal(1);
                 checkItemWithRequestOnly(items[0]);
                 done();
             });
         });
+        /*
+        it('should error if importing non-base64 encoded data', function(done) {
+            expect(function() {
+                importAll(__dirname + '/no-response.raw.xml', function (err, items) {
+                    expect(err).to.be.not.null;
+                    done();
+                });
+            }).to.throw(Error);
+        });
+        */
+        /*
         it("should import cdata encoded request only items", function(done){
             importAll(__dirname + '/no-response.raw.xml', function (items) {
                 expect(items.length).to.be.equal(1);
                 checkItemWithRequestOnly(items[0]);
+                expect(items[0].request.length).to.be.equal(313);
                 done();
             });
         });
+        */
         it("should import base64 encoded request/response items", function(done){
-            importAll(__dirname + '/with-response.b64.xml', function (items) {
+            importAll(__dirname + '/with-response.b64.xml', function (err, items) {
                 expect(items.length).to.be.equal(1);
                 checkItemWithRequestResponse(items[0]);
                 done();
             });
         });
+        /*
         it("should import cdata encoded request/response items", function(done){
             importAll(__dirname + '/with-response.raw.xml', function (items) {
                 expect(items.length).to.be.equal(1);
@@ -78,10 +100,11 @@ describe("BurpImporter", function(){
                 done();
             });
         });
+        */
         it("should import from a stream", function (done) {
             var filename = __dirname + '/multiple-items.b64.xml.gz';
             var stream = fs.createReadStream(filename).pipe(zlib.createGunzip());
-            importAll(stream, function (items) {
+            importAll(stream, function (err, items) {
                 expect(items.length).to.be.equal(5);
                 done();
             });

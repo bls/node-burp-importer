@@ -20,13 +20,14 @@ function maybeInt(x) {
 
 function maybeBase64decode(r) {
     if(r.$text === undefined) {
-        return new Buffer('');
+        return new Buffer(0);
     }
-    if(r.$.base64) {
-        return new Buffer(r.$text, 'base64');
+    if(r.$.base64 === 'true') {
+        var result = new Buffer(new Buffer(r.$text, 'base64'));
     } else {
-        return new Buffer(r.$text);
+        throw Error(); // Not reached
     }
+    return result;
 }
 
 function createStartObject(items) {
@@ -74,6 +75,13 @@ BurpImporter.prototype.import = function() {
         emit('start', createStartObject(itemsXml));
     });
     xml.on('endElement: item', function(itemXml) {
+        if(itemXml.request.$.base64 !== 'true') {
+            // The xml-stream module doesn't decode \r\n in CDATA blocks
+            // correctly. This means that decoding non-base64'd requests and
+            // responses doesn't work :(
+            // var result = new Buffer(r.$text, 'utf-8');
+            emit('error', new Error('Use base64 option when exporting from burp!'));
+        }
         var obj = createItemObject(itemXml);
         emit('item', obj);
     });
