@@ -2,7 +2,7 @@
 var BurpImporter = require(__dirname + '/../index'),
     util = require('util');
 
-var importer = new BurpImporter(__dirname + '/../test/example1.xml');
+var importer = new BurpImporter(__dirname + '/example1.xml');
 importer.on('start', function (info) {
     console.log('Dump: start');
     console.log('  burpVersion: ' + info.burpVersion);
