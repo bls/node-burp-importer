@@ -2,6 +2,7 @@
 var BurpImporter = require(__dirname + '/../index'),
     util = require('util');
 
+// source below may be stream or filename.
 var importer = new BurpImporter(__dirname + '/example1.xml');
 importer.on('start', function (info) {
     console.log('Dump: start');
